@@ -1,3 +1,5 @@
+/// Module to read and write `numpy` arrays to the stream.
+/// Based on `candle_core::npy`.
 use candle_core::{DType, Device, Error, Result, Shape, Tensor};
 use std::collections::HashMap;
 use std::marker::Unpin;
@@ -5,6 +7,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const NPY_MAGIC_STRING: &[u8] = b"\x93NUMPY";
 
+/// Read a `numpy` array from the stream and conver to a `Tensor`.
 pub async fn read_numpy<T>(mut reader: T) -> Result<Tensor>
 where
     T: AsyncReadExt + Unpin,
@@ -25,6 +28,7 @@ where
     Tensor::from_vec(arr, shape, &Device::Cpu)
 }
 
+/// Write a `Tensor` to the stream in `numpy` array format.
 pub async fn write_numpy<T>(tensor: &Tensor, f: &mut T) -> Result<()>
 where
     T: AsyncWriteExt + Unpin,

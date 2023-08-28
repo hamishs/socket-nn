@@ -1,3 +1,4 @@
+"""Simple script to test the server run in `mlp.rs`."""
 import io
 import socket
 import numpy as np
@@ -36,17 +37,10 @@ def main():
     """Test the server."""
     address = ("127.0.0.1", 8080)
 
-    x = np.eye(2)
+    x = np.random.randn(1, 32)
     y = exchange(address, x)
-    assert np.allclose(y - x, np.ones((2, 2)))
-
-    z = 1 - np.eye(2)
-    w = exchange(address, z)
-    assert np.allclose(w - z, np.ones((2, 2)))
-
-    z = np.random.randn(2, 2)
-    w = exchange(address, z)
-    assert np.allclose(w - z, np.ones((2, 2)))
+    assert y.shape == (1, 10)
+    assert np.allclose(y, 0.)
 
 if __name__ == "__main__":
     main()
