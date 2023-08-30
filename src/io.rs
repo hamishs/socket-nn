@@ -1,6 +1,7 @@
 /// Module to read and write `numpy` arrays to the stream.
 /// Based on `candle_core::npy`.
 use candle_core::{DType, Device, Error, Result, Shape, Tensor};
+use half::{bf16, f16};
 use std::collections::HashMap;
 use std::marker::Unpin;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -18,14 +19,63 @@ where
         return Err(Error::Npy("fortran order not supported".to_string()));
     }
     let shape = header.shape();
-    let mut arr: Vec<f64> = vec![];
-    let mut data = [0u8; std::mem::size_of::<f64>()];
-    for _ in 0..shape.elem_count() {
-        reader.read_exact(&mut data).await?;
-        let f = f64::from_le_bytes(data);
-        arr.push(f);
+
+    match header.descr {
+        DType::BF16 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<bf16>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(bf16::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
+        DType::F16 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<f16>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(f16::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
+        DType::F32 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<f32>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(f32::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
+        DType::F64 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<f64>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(f64::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
+        DType::U8 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<u8>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(u8::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
+        DType::U32 => {
+            let mut arr = vec![];
+            let mut data = [0u8; std::mem::size_of::<u32>()];
+            for _ in 0..shape.elem_count() {
+                reader.read_exact(&mut data).await?;
+                arr.push(u32::from_le_bytes(data));
+            }
+            Tensor::from_vec(arr, shape, &Device::Cpu)
+        }
     }
-    Tensor::from_vec(arr, shape, &Device::Cpu)
 }
 
 /// Write a `Tensor` to the stream in `numpy` array format.
@@ -220,5 +270,47 @@ impl Header {
             fortran_order,
             shape,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::fs::File;
+
+    #[tokio::test]
+    async fn test_read_numpy_f64() {
+        let mut f = File::open("tests/eye2_f64.npy").await.unwrap();
+        let tensor = read_numpy(&mut f).await.unwrap();
+        assert_eq!(tensor.dtype(), DType::F64);
+        assert_eq!(tensor.dims(), &[2, 2]);
+        let v = tensor.to_vec2::<f64>().unwrap();
+        assert_eq!(v, vec![vec![1.0, 0.0], vec![0.0, 1.0]]);
+    }
+
+    #[tokio::test]
+    async fn test_read_numpy_f32() {
+        let mut f = File::open("tests/eye2_f32.npy").await.unwrap();
+        let tensor = read_numpy(&mut f).await.unwrap();
+        assert_eq!(tensor.dtype(), DType::F32);
+        assert_eq!(tensor.dims(), &[2, 2]);
+        let v = tensor.to_vec2::<f32>().unwrap();
+        assert_eq!(v, vec![vec![1f32, 0f32], vec![0f32, 1f32]]);
+    }
+
+    #[tokio::test]
+    async fn test_read_numpy_f16() {
+        let mut f = File::open("tests/eye2_f16.npy").await.unwrap();
+        let tensor = read_numpy(&mut f).await.unwrap();
+        assert_eq!(tensor.dtype(), DType::F16);
+        assert_eq!(tensor.dims(), &[2, 2]);
+        let v = tensor.to_vec2::<f16>().unwrap();
+        assert_eq!(
+            v,
+            vec![
+                vec![f16::from_f32(1.), f16::from_f32(0.)],
+                vec![f16::from_f32(0.), f16::from_f32(1.)]
+            ]
+        );
     }
 }
