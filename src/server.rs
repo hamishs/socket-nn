@@ -5,6 +5,14 @@ use tokio::net::TcpListener;
 
 use crate::io::{read_numpy, write_numpy};
 
+/// Runs a server that accepts numpy arrays and returns the result of a forward pass.
+///
+/// # Arguments
+///
+/// * `addr` - The address to bind to.
+/// * `model` - The model to run as an Arc.
+/// * `net_forward` - The function that runs the forward pass. This should accept
+/// a reference to the model and a tensor input and should return a tensor.
 pub async fn run_server<M>(
     addr: &str,
     model: Arc<M>,

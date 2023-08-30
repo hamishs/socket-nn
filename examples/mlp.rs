@@ -1,13 +1,6 @@
 //! Example of a simple server that runs a neural network.
 //!
-//! Run with `rust-script`.
-//!
-//! ```cargo
-//! [dependencies]
-//! candle-core = { version = "0.1.2" }
-//! tokio = { version = "1", features = ["full"] }
-//! socket-nn = { path = ".." }
-//! ```
+//! Run with `cargo run --example mlp`.
 use std::sync::Arc;
 
 use candle_core::{DType, Device, Result, Tensor};
